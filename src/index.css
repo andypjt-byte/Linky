@@ -3866,6 +3866,68 @@ p {
   margin-top: 14px;
 }
 
+/* 앨범 선택 창의 그림 사진: 사진 대신 쓰는 일러스트라 색을 이 블록 안에서만 정한다 */
+.album-art {
+  --art-bowl: #ffffff;
+  --art-leaf: #7cc45a;
+  --art-leaf2: #4f9a3a;
+  --art-tomato: #ef5b4c;
+  --art-egg: #fff8e7;
+  --art-yolk: #ffc93c;
+  --art-salmon: #ff8a6b;
+  --art-rice: #f7f3ea;
+  --art-avocado: #a6c94a;
+  --art-coffee: #6b4429;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+}
+
+.album-tile.picked .album-art {
+  padding: 0;
+  border-radius: 10px;
+  background: none;
+}
+
+.album-art .bg { fill: #e9e4da; }
+.album-art.salad .bg,
+.album-art.saladFork .bg { fill: #dfe9d3; }
+.album-art.poke .bg { fill: #f3e2d6; }
+.album-art.laptop .bg { fill: #e3e8ef; }
+.album-art.sky .bg { fill: #f6c89a; }
+.album-art .bowl { fill: var(--art-bowl); }
+.album-art .leaf { fill: var(--art-leaf); }
+.album-art .leaf2 { fill: var(--art-leaf2); }
+.album-art .tomato { fill: var(--art-tomato); }
+.album-art .egg { fill: var(--art-egg); }
+.album-art .yolk { fill: var(--art-yolk); }
+.album-art .fork { fill: none; stroke: #9aa3ad; stroke-width: 3; stroke-linecap: round; }
+.album-art .rice { fill: var(--art-rice); }
+.album-art .salmon { fill: var(--art-salmon); }
+.album-art .avocado { fill: var(--art-avocado); }
+.album-art .corn { fill: var(--art-yolk); }
+.album-art .cup { fill: #ffffff; }
+.album-art .cup-line { fill: none; stroke: #ffffff; stroke-width: 5; }
+.album-art .coffee { fill: var(--art-coffee); }
+.album-art .steam { fill: none; stroke: #b9b2a6; stroke-width: 2.5; stroke-linecap: round; }
+.album-art .desk { fill: #c9b8a3; }
+.album-art .screen { fill: #3d4652; }
+.album-art .glow { fill: #8fb3e3; }
+.album-art .base { fill: #9aa3ad; }
+.album-art .sun { fill: #ffe39a; }
+.album-art .bldg { fill: #5b6474; }
+.album-art .bldg2 { fill: #48505e; }
+
+.album-tile .album-time {
+  position: absolute;
+  left: 6px;
+  bottom: 4px;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
 /* ---------- 리포트 탭 · 홈 카드 ---------- */
 .report-scroll {
   height: calc(100% - 56px);
@@ -6834,8 +6896,10 @@ p {
   position: absolute;
   top: 0;
   left: 0;
-  width: calc(375px / 0.85);
-  height: calc(812px / 0.85);
+  /* 폰 프레임(375×812, 모바일에서는 화면 전체)에 맞춘다. 고정 375px이면 360px 폰에서 오른쪽·아래가 잘린다 */
+  /* --phone-w/h는 App.tsx가 폰 프레임 실제 크기(px)로 넣는다. % 대신 px을 써야 브라우저마다 zoom 계산이 같다 */
+  width: calc(var(--phone-w, 375px) / 0.85);
+  height: calc(var(--phone-h, 812px) / 0.85);
   zoom: 0.85;
 }
 
@@ -7962,4 +8026,46 @@ p {
   font-size: var(--fs-label);
   line-height: var(--lh-label);
   font-weight: var(--fw-label);
+}
+
+/* 인원 수정: 일정에 있던 사람 동그라미 오른쪽 위 X로 빼기, 뺀 사람은 흐리게 + 되돌리기 */
+.gs-crowd-item {
+  position: relative;
+  display: flex;
+  flex: none;
+}
+
+.gs-crowd-x {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--background);
+  border-radius: 50%;
+  background: var(--text);
+  color: var(--background);
+}
+
+.gs-crowd-item.out .gs-avatar {
+  border-style: dashed;
+  background: transparent;
+  color: var(--text-mute);
+  text-decoration: line-through;
+}
+
+.gs-crowd-item.out .gs-crowd-x {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.gs-crowd-note {
+  margin: -4px 0 10px;
+  color: var(--text-mute);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  text-align: center;
 }

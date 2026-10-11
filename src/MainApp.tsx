@@ -662,6 +662,13 @@ export function MainApp({
           }}
           payment={splitting}
           state={state}
+          onHeadcountConfirmed={(_, edit) =>
+            // 인원 수정 결과를 원장에 남겨 홈 입금 배너·내 몫·받을 돈이 같이 바뀌게 한다
+            setLedger((value) => ({
+              ...value,
+              groupEdit: { ...value.groupEdit, [splitting.id]: edit },
+            }))
+          }
         />
       )}
     </div>
