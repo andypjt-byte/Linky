@@ -12,6 +12,50 @@
  * CSV는 파일 업로드 대신 "붙여넣기" 칸으로 받는다.
  * (구글폼 파일 업로드는 응답자가 구글 로그인을 해야 해서 참가자가 막힐 수 있다.)
  */
+// 과제 이름: 앱 시작 팝업의 "과제 N / 11"과 제목(lib/ut.ts의 label)과 똑같이 쓴다
+const LINKY_UT_TASKS = [
+  "과제 1/11 · 개인정보 범위 설정",
+  "과제 2/11 · 필수 약관만 동의",
+  "과제 3/11 · 오늘의 결제 확인",
+  "과제 4/11 · 오늘 지출 정리",
+  "과제 5/11 · 정산 인원 정정",
+  "과제 6/11 · 기억나지 않는 송금",
+  "과제 7/11 · 어제 기록 채우기",
+  "과제 8/11 · 오늘의 동선 보기",
+  "과제 9/11 · 내 정산 몫 확인",
+  "과제 10/11 · 다음 주 일정 확인",
+  "과제 11/11 · 장소 지출 검색",
+]
+const PARTICIPANT_HELP =
+  "안내받은 번호(예: P01)를 적어 주세요. 번호를 안내받지 않았다면 앱 마지막 화면의 '내 참가자 번호'를 적어 주세요."
+const MEMO_HELP =
+  "멈췄던 화면, 눌러도 아무 일 없던 곳, 이해가 안 된 문구를 화면에 쓰여 있는 그대로 적어 주세요.\n" +
+  "과제 번호를 앞에 붙여 주세요. 예: 5/11) 수진을 빼는 방법을 못 찾았어요"
+
+/**
+ * 이미 만든 폼을 고친다 (참가자용 주소는 그대로). 아래 FORM_ID를 편집 주소의 /d/ 와 /edit 사이 값으로 바꾼 뒤 실행.
+ * 과제 표 3개(결과·헤맨 정도·쉬웠나요?)의 줄 이름과 참가자 번호·메모 안내를 새 문구로 바꾼다.
+ * ⚠️ 이미 응답이 쌓인 뒤에 줄 이름을 바꾸면 응답 시트에 새 열이 생길 수 있다. 응답 받기 전에 실행한다.
+ */
+function updateLinkyUTForm() {
+  const FORM_ID = "1mYOrGqEODc2uoEerV2hugmC4os2G26A6Fpn54TfOJk8"
+  const form = FormApp.openById(FORM_ID)
+  let grids = 0
+  form.getItems().forEach((item) => {
+    const title = item.getTitle()
+    if (item.getType() === FormApp.ItemType.GRID) {
+      item.asGridItem().setRows(LINKY_UT_TASKS)
+      grids += 1
+    } else if (title === "참가자 번호") {
+      item.asTextItem().setHelpText(PARTICIPANT_HELP)
+    } else if (title === "메모") {
+      item.asParagraphTextItem().setHelpText(MEMO_HELP)
+    }
+  })
+  Logger.log("과제 표 " + grids + "개를 고쳤어요 (3개가 정상)")
+  Logger.log("참가자용 주소(그대로): " + form.getPublishedUrl())
+}
+
 function createLinkyUTForm() {
   const form = FormApp.create("Linky 사용성 테스트 제출")
   form.setDescription(
@@ -26,7 +70,7 @@ function createLinkyUTForm() {
   form
     .addTextItem()
     .setTitle("참가자 번호")
-    .setHelpText("앱 마지막 화면의 '내 참가자 번호'를 적어 주세요. 예: P4821")
+    .setHelpText(PARTICIPANT_HELP)
     .setRequired(true)
   form.addDateItem().setTitle("테스트한 날짜").setRequired(true)
   form
@@ -36,20 +80,6 @@ function createLinkyUTForm() {
     .setRequired(true)
 
   // ---------- 2. 자가 기록표 ----------
-  // 과제 이름은 앱 UT 안내 카드(lib/ut.ts의 label)와 똑같이 쓴다
-  const tasks = [
-    "과제 1 · 개인정보 범위 설정",
-    "과제 2 · 필수 약관만 동의",
-    "과제 3 · 결제 맥락 확인",
-    "과제 4 · 그룹 지출 정산",
-    "과제 4-B (선택) · 정산 인원 수정",
-    "과제 5 · 송금 맥락 확인",
-    "과제 6 · 앨범에서 기록 연결",
-    "과제 7 · 동선 지도 확인",
-    "과제 8 · 완료된 정산 확인",
-    "과제 9 · 다음 주 일정 확인",
-    "과제 10 · 장소 지출 검색",
-  ]
   form
     .addPageBreakItem()
     .setTitle("자가 기록표")
@@ -57,26 +87,23 @@ function createLinkyUTForm() {
   form
     .addGridItem()
     .setTitle("결과")
-    .setRows(tasks)
+    .setRows(LINKY_UT_TASKS)
     .setColumns(["끝냈어요", "못 끝냈어요", "잘 모르겠어요"])
   form
     .addGridItem()
     .setTitle("헤맨 정도")
-    .setRows(tasks)
+    .setRows(LINKY_UT_TASKS)
     .setColumns(["바로 했어요", "조금 헤맸어요", "많이 헤맸어요"])
   form
     .addGridItem()
     .setTitle("쉬웠나요?")
     .setHelpText("1 매우 어려워요 ~ 5 매우 쉬워요 (앱 안 난이도 질문과 같은 방향이에요)")
-    .setRows(tasks)
+    .setRows(LINKY_UT_TASKS)
     .setColumns(["1", "2", "3", "4", "5"])
   form
     .addParagraphTextItem()
     .setTitle("메모")
-    .setHelpText(
-      "멈췄던 화면, 눌러도 아무 일 없던 곳, 이해가 안 된 문구를 화면에 쓰여 있는 그대로 적어 주세요.\n" +
-        "과제 번호를 앞에 붙여 주세요. 예: 4) '정산 완료' 버튼을 못 찾았어요",
-    )
+    .setHelpText(MEMO_HELP)
 
   // ---------- 3. 마치고 답해 주세요 ----------
   form
