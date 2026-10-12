@@ -3,12 +3,13 @@ import { Action, StatusChip } from "@/components/common"
 import { MainHeader } from "@/components/layout"
 import {
   type LedgerState,
+  headcountOf,
   label,
   payments,
   shareOf,
   won as wonFull,
 } from "@/lib/ledger"
-import { settlementPeriod, settlementTitle, summarize, won } from "@/lib/settlement"
+import { meeting, settlementPeriodOf, settlementTitle, summarize, won } from "@/lib/settlement"
 
 // 마이페이지 > 정산 내역
 export function SettlementList({
@@ -59,7 +60,7 @@ export function SettlementList({
             <>
               <div>
                 <strong>{settlementTitle}</strong>
-                <span>{settlementPeriod}</span>
+                <span>{settlementPeriodOf(meeting && state ? headcountOf(meeting, state) : undefined)}</span>
                 <p>
                   결제 {summary.items.length}건 · {won(summary.total)}
                 </p>

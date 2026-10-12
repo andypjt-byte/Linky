@@ -15,9 +15,11 @@ export const MEMBERS: readonly Member[] = SCENARIO.meal.members
 // 정산 대상: 대표 결제 강남역 고깃집 (시나리오 원천은 mock/scenario.ts). 내가 먼저 내고 3명이 입금했다.
 export const meeting = scenarioPayments.find((payment) => payment.id === SCENARIO.meal.id)
 export const settlementTitle = meeting?.merchant ?? "그룹 결제"
-export const settlementPeriod = meeting
-  ? `${meeting.date.m}월 ${meeting.date.d}일 · ${meeting.place ?? meeting.zone} · ${MEMBERS.length}명`
-  : `${MEMBERS.length}명`
+// 인원은 인원 수정 결과를 따른다(기본은 일정 인원). 정산 내역 카드의 날짜·장소·인원 줄
+export const settlementPeriodOf = (count: number = MEMBERS.length) =>
+  meeting
+    ? `${meeting.date.m}월 ${meeting.date.d}일 · ${meeting.place ?? meeting.zone} · ${count}명`
+    : `${count}명`
 export const settlementItems: readonly SettlementItem[] = meeting
   ? [{ name: meeting.merchant, category: "식비", amount: meeting.amount, payer: "나" }]
   : []

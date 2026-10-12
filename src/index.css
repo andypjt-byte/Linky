@@ -8069,3 +8069,12 @@ p {
   line-height: var(--lh-caption);
   text-align: center;
 }
+
+/* 검색 결과: 스크롤바가 생기며 폭이 줄지 않게 숨긴다 (지도·앨범 시트와 같은 방식) */
+.search-content {
+  scrollbar-width: none;
+}
+
+.search-content::-webkit-scrollbar {
+  display: none;
+}
