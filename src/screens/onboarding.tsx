@@ -182,6 +182,10 @@ export function BasicInfo({
                 value={name}
               />
             </div>
+            {/* 이름이 한 글자면 인증번호 받기가 꺼져 있는 이유를 알려 준다 */}
+            {name.trim().length === 1 && (
+              <p className="field-hint">이름을 2글자 이상 입력해 주세요</p>
+            )}
           </div>
           <div className="field">
             <p className="field-label">주민등록번호 앞 7자리</p>
