@@ -8404,3 +8404,17 @@ p {
 .tf-renamed-to {
   color: var(--primary-text);
 }
+
+/* 정산 시트 2단계: 인원 수정은 본문 아래 작은 링크로 둔다 */
+.gs-edit-link {
+  width: 100%;
+  margin: 8px 0 4px;
+  display: flex;
+  justify-content: center;
+  color: var(--text-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  font-weight: var(--fw-body);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
