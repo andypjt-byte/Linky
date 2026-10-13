@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { useRef, type MouseEvent, type PointerEvent } from "react"
 import { Action, cx } from "@/components/common"
+import { HomeMediaActions } from "@/components/homeMediaActions"
 import { HeaderActions } from "@/components/layout"
 import { meeting } from "@/lib/settlement"
 import { CleanupCard } from "@/screens/cleanup"
@@ -365,7 +366,7 @@ export function HomePage({
   openProfile: () => void
   selectDay: (day: YMD) => void
   openPayment: (payment: Payment) => void
-  openAlbum: () => void
+  openAlbum: (day: YMD) => void
   openMap: (day: YMD) => void
   openPhoto: (photo: Photo) => void
   // 정산 알림(필요시): 처리할 정산이 있을 때만 값이 있다
@@ -511,6 +512,8 @@ export function HomePage({
           </div>
         </section>
 
+        <HomeMediaActions day={day} openAlbum={openAlbum} openMap={openMap} />
+
         {notices.map((notice) => (
           <NoticeCard key={notice.key} notice={notice} />
         ))}
@@ -525,49 +528,6 @@ export function HomePage({
           <p>{story || "기록 없음"}</p>
         </section>
 
-        <div className="hm-title-row">
-          <h2>{isToday ? "오늘의 동선" : `${label(day)}의 동선`}</h2>
-          <Action className="home-more" onClick={() => openMap(day)}>
-            지도로 보기
-          </Action>
-        </div>
-        {stops.length === 0 ? (
-          <p className="hm-empty">기록 없음</p>
-        ) : (
-          <RouteMap day={day} onOpen={() => openMap(day)} stops={stops} />
-        )}
-        <p className="home-sub">결제 당시 내 위치</p>
-
-        <div className="hm-title-row">
-          <h2>{isToday ? "오늘의 사진" : `${label(day)}의 사진`}</h2>
-          <Action className="home-more" onClick={openAlbum}>
-            앨범 보기
-          </Action>
-        </div>
-        {selectedPhotos.length === 0 ? (
-          <p className="hm-empty">기록 없음</p>
-        ) : (
-          <div className="hm-photos" {...photoDrag}>
-            {selectedPhotos.map((photo, index) => {
-              const paid = linkedPayment(photo)
-              return (
-                <Action
-                  className="hm-photo"
-                  key={photo.id}
-                  label={`${photo.title} 사진`}
-                  onClick={() => openPhoto(photo)}
-                >
-                  <i className={cx("photo-thumb", `t${index % 5}`)} />
-                  <span>
-                    {paid
-                      ? (restoredOf(paid, state)?.label ?? paid.merchant)
-                      : `${photo.zone} ${photo.time}`}
-                  </span>
-                </Action>
-              )
-            })}
-          </div>
-        )}
         </div>
       </div>
     </>
