@@ -8133,6 +8133,278 @@ p {
   }
 }
 
+/* ---------- 정리할 지출 (홈 카드 · 대화 화면 · 완료 팝업) ---------- */
+.cl-thread {
+  height: calc(100% - 100px);
+  padding-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cl-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.cl-row.me {
+  justify-content: flex-end;
+}
+
+.cl-avatar {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.cl-bubble {
+  max-width: 80%;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-radius: 4px 18px 18px 18px;
+  background: var(--surface);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  font-weight: var(--fw-body);
+  word-break: keep-all;
+}
+
+.cl-bubble.me {
+  border-radius: 18px 4px 18px 18px;
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.cl-orig,
+.cl-sub {
+  color: var(--text-mute);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-weight: var(--fw-caption);
+}
+
+.cl-text {
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
+.cl-title {
+  font-size: var(--fs-item-title);
+  line-height: var(--lh-item-title);
+  font-weight: var(--fw-item-title);
+}
+
+.cl-amount {
+  font-size: var(--fs-item-amount);
+  line-height: var(--lh-item-amount);
+  font-weight: var(--fw-item-amount);
+}
+
+.cl-evidence {
+  margin: 4px 0 0;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-radius: 12px;
+  background: var(--background);
+  list-style: none;
+  color: var(--text-body);
+  font-size: var(--fs-label);
+  line-height: var(--lh-label);
+  font-weight: var(--fw-label);
+}
+
+.cl-chips {
+  height: 56px;
+  padding: 8px var(--page-padding) 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.cl-done {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  z-index: 90;
+  padding: 22px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  border-radius: 24px;
+  background: var(--background);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: cl-done 2.2s ease forwards;
+  white-space: nowrap;
+}
+
+.cl-done strong {
+  font-size: var(--fs-title);
+  line-height: var(--lh-title);
+  font-weight: var(--fw-title);
+}
+
+.cl-done span {
+  color: var(--text-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  font-weight: var(--fw-body);
+}
+
+@keyframes cl-done {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -46%);
+  }
+  12%,
+  80% {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cl-done {
+    animation: none;
+  }
+}
+
+/* ---------- 링키가 찾았어요: 송금 맥락 알림·팝업·바뀐 이름 (transferNotice.tsx) ---------- */
+.tf-notice-count {
+  margin-left: 4px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-weight: var(--fw-title);
+  font-style: normal;
+}
+
+.tf-notice > svg:last-child {
+  flex: none;
+  color: var(--text-mute);
+}
+
+.main-overlay.center.tf-popup-dim {
+  z-index: 70;
+}
+
+.tf-popup {
+  width: 100%;
+  position: relative;
+  padding: 22px 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 20px;
+  background: var(--background);
+  animation: fade-in 0.2s ease;
+}
+
+.tf-popup-close {
+  width: 32px;
+  height: 32px;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--text-mute);
+}
+
+.tf-popup-badge {
+  align-self: flex-start;
+  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 12px;
+  background: var(--lime-card);
+  color: var(--primary-text);
+  font-size: var(--fs-label);
+  line-height: var(--lh-label);
+  font-weight: var(--fw-title);
+}
+
+.tf-popup-facts {
+  margin: 4px 0 0;
+  color: var(--text-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
+.tf-popup-rename {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  font-size: var(--fs-title);
+  line-height: var(--lh-title);
+}
+
+.tf-popup-rename s {
+  color: var(--text-mute);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
+.tf-popup-rename span {
+  color: var(--text-mute);
+}
+
+.tf-popup-rename strong {
+  color: var(--primary-text);
+  font-weight: var(--fw-title);
+}
+
+.tf-popup-evidence {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text-body);
+  font-size: var(--fs-label);
+  line-height: var(--lh-label);
+}
+
+.tf-popup-actions {
+  margin-top: 6px;
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 8px;
+}
+
+/* 맞아요로 바뀐 송금 행: 원래 이름 취소선 → 새 이름(포인트 색) */
+.tf-renamed-from s {
+  color: var(--text-mute);
+}
+
+.tf-renamed-to {
+  color: var(--primary-text);
+}
+
 /* 정산 시트 2단계: 인원 수정은 본문 아래 작은 링크로 둔다 */
 .gs-edit-link {
   width: 100%;
