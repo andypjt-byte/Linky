@@ -15,6 +15,7 @@ import { useRef, type MouseEvent, type PointerEvent } from "react"
 import { Action, cx } from "@/components/common"
 import { HeaderActions } from "@/components/layout"
 import { meeting } from "@/lib/settlement"
+import { CleanupCard } from "@/screens/cleanup"
 import { type FoundTransfer, TransferNotice } from "@/screens/transferNotice"
 import {
   TODAY,
@@ -355,6 +356,8 @@ export function HomePage({
   pendingSettlement,
   pendingTransfers,
   openTransfer,
+  cleanupCount = 0,
+  openCleanup,
 }: {
   day: YMD
   state: LedgerState
@@ -371,6 +374,9 @@ export function HomePage({
   // "링키가 찾았어요": 맥락을 찾았지만 아직 확인하지 않은 송금 (transferNotice.tsx)
   pendingTransfers: FoundTransfer[]
   openTransfer: (first: FoundTransfer) => void
+  // 정리할 지출: 오늘 확인이 남은 건수와, 대화형 정리 화면을 여는 진입
+  cleanupCount?: number
+  openCleanup?: () => void
 }) {
   // 고른 날이 속한 주를 보여 준다. 화살표로 한 주씩 이동하고, 이번 주보다 뒤로는 가지 않는다
   const week = weekOf(day)
@@ -431,7 +437,16 @@ export function HomePage({
       </div>
       <div className="main-scroll hm-scroll">
         <div className="hm-zoom">
-        {isToday && <TransferNotice items={pendingTransfers} onClick={openTransfer} />}
+        {/* "링키가 찾았어요" 자리: 찾은 송금이 있으면 A의 알림, 정리할 지출만 있으면 정리 카드. 누르면 둘 다 같은 대화로 이어진다 */}
+        {isToday &&
+          (pendingTransfers.length > 0 ? (
+            <TransferNotice
+              items={pendingTransfers}
+              onClick={(first) => (openCleanup ? openCleanup() : openTransfer(first))}
+            />
+          ) : (
+            openCleanup && <CleanupCard count={cleanupCount} open={openCleanup} />
+          ))}
 
         <section className="hm-weekcard">
           <div className="hm-head">

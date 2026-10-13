@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { UserRound } from "lucide-react"
 import { Action } from "@/components/common"
 import { BottomTabs } from "@/components/layout"
@@ -27,6 +27,7 @@ import {
   PrivacySettings,
   ProfileInfoSettings,
 } from "@/screens/profile"
+import { CleanupScreen, cleanupItems } from "@/screens/cleanup"
 import { GroupSuggestSheet } from "@/screens/groupSuggest"
 import { PaymentDetail } from "@/screens/payment"
 import { type FoundTransfer, TransferPopup } from "@/screens/transferNotice"
@@ -91,6 +92,9 @@ export function MainApp({
     return () => window.clearTimeout(timer)
   }, [toast])
   const [splitting, setSplitting] = useState<Payment>()
+  // 정리할 지출: "기록 없음으로 두기"를 누른 결제와, 모두 끝났을 때 한 번 뜨는 완료 팝업
+  const [cleanupSkipped, setCleanupSkipped] = useState<string[]>([])
+  const [cleanupDone, setCleanupDone] = useState(false)
   // 링키가 찾았어요: 확인 중인 송금
   const [transferId, setTransferId] = useState<string>()
   // 지출 내역 상세: 홈 오늘 지출에서 연 결제
@@ -116,6 +120,21 @@ export function MainApp({
   )
   // 그룹 결제 확인의 "아니요, 개인 지출"이 가리키는 결제
   const meetingId = meeting?.id
+  const cleanup = cleanupItems(state, cleanupSkipped)
+  // 정리할 건이 있다가 0이 되는 순간에만 "오늘 정리 끝"을 한 번 보인다 (어느 화면에서 끝내도 같다)
+  const prevCleanup = useRef(cleanup.length)
+  useEffect(() => {
+    // 대화 화면 안에서는 대화가 끝날 때 팝업을 띄운다 (송금 질문이 남아 있을 수 있다)
+    if (prevCleanup.current > 0 && cleanup.length === 0 && view !== "cleanup") {
+      setCleanupDone(true)
+    }
+    prevCleanup.current = cleanup.length
+  }, [cleanup.length])
+  useEffect(() => {
+    if (!cleanupDone) return
+    const timer = window.setTimeout(() => setCleanupDone(false), 2200)
+    return () => window.clearTimeout(timer)
+  }, [cleanupDone])
   const toTabs = () => setView("tabs")
   const dayNumber = (payment: Payment) => payment.date.y * 10000 + payment.date.m * 100 + payment.date.d
   // 맥락을 찾았지만 아직 맞아요/아니에요를 누르지 않은 송금 (홈 알림·팝업), 최근 것부터
@@ -133,20 +152,37 @@ export function MainApp({
     .sort((a, b) => dayNumber(b.payment) - dayNumber(a.payment))
   // 오늘 송금은 홈에 들어올 때 팝업으로 한 번만 띄운다 (닫으면 홈 상단 알림으로 남는다)
   const todayTransfer = pendingTransfers.find((item) => sameDay(item.payment.date, TODAY))
+  // 오늘 정산을 확인해야 하는 그룹 결제는 홈에서 정산 시트를 팝업으로 한 번 띄운다.
+  // 송금 팝업이 먼저 뜨는 날은 그 팝업을 닫은 뒤에 띄워 두 팝업이 겹치지 않게 한다.
+  // 닫아도 홈 알림 카드·정산 대기 배지로 다시 열 수 있다.
+  const groupPopupShown = useRef(false)
+  useEffect(() => {
+    if (groupPopupShown.current || !meeting) return
+    if (tab !== "home" || view !== "tabs") return
+    if (todayTransfer && !transferPopupSeen) return
+    groupPopupShown.current = true
+    const pending =
+      sameDay(meeting.date, TODAY) &&
+      !settled &&
+      !state.splitConfirmed.includes(meeting.id) &&
+      !(state.personal ?? []).includes(meeting.id)
+    if (pending) setSplitting(meeting)
+  }, [tab, view, todayTransfer, transferPopupSeen, settled, state.personal, state.splitConfirmed])
   const transferPayment = payments.find((item) => item.id === transferId)
   const detailPayment = payments.find((item) => item.id === detailId)
   const openDetail = (payment: Payment) => {
     setDetailId(payment.id)
     setView("paymentDetail")
   }
-  const confirmTransfer = (payment: Payment) => {
+  // stay: 정리 대화 안에서 처리할 때는 캘린더로 나가지 않고 그 자리에서 이어간다
+  const confirmTransfer = (payment: Payment, stay = false) => {
     showToast("확인했어요")
     setLedger((value) => ({
       ...value,
       transferMatched: [...value.transferMatched, payment.id],
     }))
     // 재분류된 결과를 지출 내역(날짜 시트)에서 바로 보여 준다
-    openPayment(payment)
+    if (!stay) openPayment(payment)
   }
   // 수정 → "원래 이름으로 되돌리기": 맞아요를 취소해 다시 송금(이체)으로 둔다
   const revertTransfer = (paymentId: string) => {
@@ -156,12 +192,12 @@ export function MainApp({
       transferMatched: value.transferMatched.filter((id) => id !== paymentId),
     }))
   }
-  const declineTransfer = (payment: Payment) => {
+  const declineTransfer = (payment: Payment, stay = false) => {
     setLedger((value) => ({
       ...value,
       transferDeclined: [...(value.transferDeclined ?? []), payment.id],
     }))
-    toTabs()
+    if (!stay) toTabs()
   }
   const recordPayment = payments.find((item) => item.id === recordTarget)
 
@@ -241,7 +277,8 @@ export function MainApp({
         },
       }
     })
-    if (view !== "paymentDetail") setView("tabs")
+    // 정리 화면에서 기록을 붙였을 때는 그 자리에서 다음 건을 이어서 본다
+    if (view !== "paymentDetail" && view !== "cleanup") setView("tabs")
     setRecordTarget(undefined)
   }
   const openRecord = (paymentId?: string) => {
@@ -308,6 +345,8 @@ export function MainApp({
                 })()
           }
           openPayment={openDetail}
+          cleanupCount={cleanup.length}
+          openCleanup={() => setView("cleanup")}
           openProfile={() => setView("profile")}
           openSearch={() => setView("search")}
           selectDay={setHomeDay}
@@ -566,6 +605,22 @@ export function MainApp({
             state={state}
           />
         ) : null
+      case "cleanup":
+        return (
+          <CleanupScreen
+            addRecord={openRecord}
+            back={toTabs}
+            confirm={confirmRestore}
+            confirmTransfer={(payment) => confirmTransfer(payment, true)}
+            declineTransfer={(payment) => declineTransfer(payment, true)}
+            edit={(payment) => openPayment(payment)}
+            finish={() => setCleanupDone(true)}
+            items={cleanup}
+            skip={(id) => setCleanupSkipped((value) => [...value, id])}
+            state={state}
+            transfers={pendingTransfers}
+          />
+        )
       case "settlementList":
         return (
           <SettlementList
@@ -722,6 +777,12 @@ export function MainApp({
       {toast && (
         <div className="app-toast" key={toast.key} role="status" aria-live="polite">
           {toast.text}
+        </div>
+      )}
+      {cleanupDone && (
+        <div className="cl-done" role="status" aria-live="polite">
+          <strong>오늘 정리 끝</strong>
+          <span>확인할 지출을 모두 확인했어요</span>
         </div>
       )}
     </div>
