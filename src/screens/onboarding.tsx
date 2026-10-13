@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react"
 import {
+  ArrowDown,
   CalendarDays,
   Check,
   ChevronDown,
@@ -304,6 +305,8 @@ export const permissions: Array<{
   purpose: string
   // 실제로 쓰는 범위 (개인정보 고지·마이페이지에 그대로 표시)
   scope?: string
+  // 어디에 쓰는지: 앱 안에서 이 정보가 보이는 화면
+  usedIn: string
 }> = [
   {
     key: "payment",
@@ -314,6 +317,7 @@ export const permissions: Array<{
     icon: <CreditCard size={19} strokeWidth={1.5} />,
     collects: "결제 일시·금액·가맹점명",
     purpose: "결제를 날짜별로 모아 보여줘요",
+    usedIn: "홈 · 캘린더의 지출 내역",
   },
   {
     key: "calendar",
@@ -322,6 +326,7 @@ export const permissions: Array<{
     icon: <CalendarDays size={19} strokeWidth={1.5} />,
     collects: "일정 제목·시간·장소",
     purpose: "결제 시각과 겹치는 일정을 근거로 써요",
+    usedIn: "지출 카드의 근거 · 하루 일정",
   },
   {
     key: "photos",
@@ -331,6 +336,7 @@ export const permissions: Array<{
     collects: "사진 촬영 시각·위치 정보",
     purpose: "결제 전후 30분 사진을 근거로 써요",
     scope: "결제 시각 ±30분 · 반경 500m 사진만 사용",
+    usedIn: "지출 카드의 근거 · 앨범",
   },
   {
     key: "location",
@@ -339,6 +345,7 @@ export const permissions: Array<{
     icon: <MapPin size={19} strokeWidth={1.5} />,
     collects: "결제 시각의 내 위치 기록",
     purpose: "그날 동선을 지도에 보여줘요",
+    usedIn: "지출 카드의 근거 · 동선 지도",
   },
 ]
 
@@ -359,6 +366,19 @@ export function Permissions({
         title={"기록을 가져올 곳을\n골라주세요"}
         sub="끈 곳의 기록은 근거로 쓰지 않아요"
       />
+      {/* 어떤 데이터가 들어가 무엇이 나오는지 먼저 보여 준다 */}
+      <div className="ob-flow" aria-label="기록이 쓰이는 방식">
+        <div>
+          <span>들어가는 것</span>
+          <strong>결제 내역 + 내 일정·사진·위치</strong>
+        </div>
+        <ArrowDown aria-hidden="true" size={16} strokeWidth={1.8} />
+        <div className="out">
+          <span>나오는 것</span>
+          <strong>결제한 장소와 함께한 일정</strong>
+          <small>맞는지는 [맞아요]·[수정]으로 직접 확인해요</small>
+        </div>
+      </div>
       <div className="list-cards permission-cards">
         {permissions.map((item) => (
           <div className="list-card" key={item.key}>
@@ -426,8 +446,27 @@ export function PrivacyNotice({
                   </strong>
                   <Badge>{item.required ? "필수" : "선택"}</Badge>
                 </div>
-                <span>{off ? "동의하지 않음 · 근거에서 빠져요" : item.collects}</span>
-                {item.scope && !off && <span className="privacy-scope">{item.scope}</span>}
+                {off ? (
+                  <span>동의하지 않음 · 근거에서 빠져요</span>
+                ) : (
+                  <dl className="perm-lines">
+                    <div>
+                      <dt>무엇을</dt>
+                      <dd>
+                        {item.collects}
+                        {item.scope ? " (" + item.scope + ")" : ""}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>왜</dt>
+                      <dd>{item.purpose}</dd>
+                    </div>
+                    <div>
+                      <dt>어디에</dt>
+                      <dd>{item.usedIn}</dd>
+                    </div>
+                  </dl>
+                )}
               </div>
               {!item.required && (
                 <Action className="privacy-reject" onClick={() => toggle(item.key)}>
