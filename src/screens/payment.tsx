@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { CalendarDays, ImageIcon, ImagePlus, MapPin, Plus } from "lucide-react"
-import { Action } from "@/components/common"
+import { Action, cx } from "@/components/common"
 import { MainHeader } from "@/components/layout"
 import {
   categoryOf,
@@ -36,6 +36,7 @@ export function PaymentDetail({
   unlinkPhoto,
   relinkPhoto,
   openRecord,
+  revertTransfer,
 }: {
   payment: Payment
   state: LedgerState
@@ -46,6 +47,8 @@ export function PaymentDetail({
   unlinkPhoto: (photoId: string) => void
   relinkPhoto: (photoId: string) => void
   openRecord: (paymentId: string) => void
+  // 송금 수정 → 원래 이름으로 되돌리기 (맞아요 취소)
+  revertTransfer?: (paymentId: string) => void
 }) {
   // [수정]을 누르면 이 화면 안에서 근거를 해제·되돌린다
   const [editing, setEditing] = useState(false)
@@ -103,10 +106,21 @@ export function PaymentDetail({
         {/* 요약 카드: 캘린더 결제 카드와 같은 모양 (원래 이름 · 장소 이름 · 금액 + 맞아요/수정) */}
         <section className="pd-hero">
           <span className="pd-orig">
-            {restored ? originalName : `${payment.time} · ${originalName}`}
+            {restored?.kind === "transfer" ? (
+              // 맞아요로 바뀐 송금: 원래 이름 취소선 → 새 이름(포인트 색)
+              <span className="tf-renamed-from">
+                <s>{originalName}</s> →
+              </span>
+            ) : restored ? (
+              originalName
+            ) : (
+              `${payment.time} · ${originalName}`
+            )}
             {people > 1 && !splitDone && <em className="pd-chip">정산 대기</em>}
           </span>
-          <p className="pd-name">{restored ? restored.label : originalName}</p>
+          <p className={cx("pd-name", restored?.kind === "transfer" && "tf-renamed-to")}>
+            {restored ? restored.label : originalName}
+          </p>
           <div className="pd-price">
             <strong className="pd-won">{won(mine)}</strong>
             {restored && (
@@ -246,6 +260,19 @@ export function PaymentDetail({
                 </Action>
               </div>
             ))}
+            {restored?.kind === "transfer" && revertTransfer && (
+              <div className="detail-actions">
+                <Action
+                  className="pill"
+                  onClick={() => {
+                    revertTransfer(payment.id)
+                    setEditing(false)
+                  }}
+                >
+                  원래 이름으로 되돌리기
+                </Action>
+              </div>
+            )}
           </div>
         )}
       </div>
