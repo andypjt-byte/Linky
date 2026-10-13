@@ -15,7 +15,7 @@ import { useRef, type MouseEvent, type PointerEvent } from "react"
 import { Action, cx } from "@/components/common"
 import { HeaderActions } from "@/components/layout"
 import { meeting } from "@/lib/settlement"
-import { CleanupBadge } from "@/screens/cleanup"
+import { CleanupCard } from "@/screens/cleanup"
 import {
   TODAY,
   dayMine,
@@ -440,15 +440,9 @@ export function HomePage({
       </div>
       <div className="main-scroll hm-scroll">
         <div className="hm-zoom">
-        {isToday && foundBody && (
-          <Action className="hm-link" onClick={openTransfer}>
-            <Sparkles size={20} strokeWidth={1.6} />
-            <span className="hm-link-text">
-              <strong>링키가 찾았어요</strong>
-              <small>{foundBody}</small>
-            </span>
-            <span className="hm-link-pill">확인</span>
-          </Action>
+        {/* "링키가 찾았어요" 자리: 정리할 지출을 먼저 보이고, 누르면 대화로 이어진다 */}
+        {isToday && openCleanup && (
+          <CleanupCard count={cleanupCount} found={foundBody} open={openCleanup} />
         )}
 
         <section className="hm-weekcard">
@@ -490,8 +484,6 @@ export function HomePage({
             })}
           </div>
         </section>
-
-        {isToday && openCleanup && <CleanupBadge count={cleanupCount} open={openCleanup} />}
 
         <section className="main-card hm-today">
           <div className="hm-today-top">

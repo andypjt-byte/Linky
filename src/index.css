@@ -8133,66 +8133,74 @@ p {
   }
 }
 
-/* ---------- 정리할 지출 (홈 배지 · 정리 화면 · 완료 팝업) ---------- */
-.cl-badge {
-  width: 100%;
-  margin-bottom: 12px;
-  padding: 12px 16px;
+/* ---------- 정리할 지출 (홈 카드 · 대화 화면 · 완료 팝업) ---------- */
+.cl-thread {
+  height: calc(100% - 100px);
+  padding-bottom: 12px;
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cl-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.cl-row.me {
+  justify-content: flex-end;
+}
+
+.cl-avatar {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  border-radius: 20px;
-  background: var(--lime-card);
-  text-align: left;
+  justify-content: center;
+  border-radius: 14px;
+  background: var(--primary);
+  color: var(--on-primary);
 }
 
-.cl-badge-text {
-  min-width: 0;
-  flex: 1;
+.cl-bubble {
+  max-width: 80%;
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-}
-
-.cl-badge-text strong {
-  font-size: var(--fs-item-title);
-  line-height: var(--lh-item-title);
-  font-weight: var(--fw-item-title);
-}
-
-.cl-badge-text small {
-  color: var(--text-body);
+  gap: 4px;
+  border-radius: 4px 18px 18px 18px;
+  background: var(--surface);
   font-size: var(--fs-body);
   line-height: var(--lh-body);
   font-weight: var(--fw-body);
+  word-break: keep-all;
 }
 
-.cl-progress {
-  margin: 8px 2px 12px;
-  color: var(--text-mute);
-  font-size: var(--fs-body);
-  line-height: var(--lh-body);
-  font-weight: var(--fw-body);
+.cl-bubble.me {
+  border-radius: 18px 4px 18px 18px;
+  background: var(--primary);
+  color: var(--on-primary);
 }
 
-.cl-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.cl-orig {
+.cl-orig,
+.cl-sub {
   color: var(--text-mute);
   font-size: var(--fs-caption);
   line-height: var(--lh-caption);
   font-weight: var(--fw-caption);
 }
 
+.cl-text {
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
 .cl-title {
-  font-size: var(--fs-title);
-  line-height: var(--lh-title);
-  font-weight: var(--fw-title);
-  word-break: keep-all;
+  font-size: var(--fs-item-title);
+  line-height: var(--lh-item-title);
+  font-weight: var(--fw-item-title);
 }
 
 .cl-amount {
@@ -8201,21 +8209,14 @@ p {
   font-weight: var(--fw-item-amount);
 }
 
-.cl-none {
-  color: var(--text-mute);
-  font-size: var(--fs-body);
-  line-height: var(--lh-body);
-  font-weight: var(--fw-body);
-}
-
 .cl-evidence {
   margin: 4px 0 0;
-  padding: 10px 12px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
   gap: 4px;
   border-radius: 12px;
-  background: var(--surface);
+  background: var(--background);
   list-style: none;
   color: var(--text-body);
   font-size: var(--fs-label);
@@ -8223,54 +8224,12 @@ p {
   font-weight: var(--fw-label);
 }
 
-.cl-actions {
-  margin-top: 10px;
+.cl-chips {
+  height: 56px;
+  padding: 8px var(--page-padding) 0;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-}
-
-.cl-rest {
-  margin-top: 20px;
-}
-
-.cl-rest h2 {
-  margin-bottom: 8px;
-  font-size: var(--fs-body);
-  line-height: var(--lh-body);
-  font-weight: var(--fw-item-title);
-}
-
-.cl-rest-row {
-  width: 100%;
-  margin-bottom: 8px;
-  padding: 12px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  border-radius: 16px;
-  background: var(--surface);
-  text-align: left;
-}
-
-.cl-rest-row span {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.cl-rest-row small {
-  color: var(--text-mute);
-  font-size: var(--fs-caption);
-  line-height: var(--lh-caption);
-  font-weight: var(--fw-caption);
-}
-
-.cl-rest-row b {
-  font-size: var(--fs-item-amount);
-  font-weight: var(--fw-item-amount);
 }
 
 .cl-done {

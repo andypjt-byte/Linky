@@ -136,7 +136,6 @@ export function MainApp({
   useEffect(() => {
     if (prevCleanup.current > 0 && cleanup.length === 0) {
       setCleanupDone(true)
-      setView((current) => (current === "cleanup" ? "tabs" : current))
     }
     prevCleanup.current = cleanup.length
   }, [cleanup.length])
@@ -175,9 +174,7 @@ export function MainApp({
       ...value,
       transferDeclined: [...(value.transferDeclined ?? []), payment.id],
     }))
-    // 정리할 지출이 남아 있으면 첫 건부터 이어서 확인한다
-    if (cleanup.length > 0) setView("cleanup")
-    else toTabs()
+    toTabs()
   }
   const recordPayment = payments.find((item) => item.id === recordTarget)
 
@@ -591,10 +588,17 @@ export function MainApp({
             addRecord={openRecord}
             back={toTabs}
             confirm={confirmRestore}
+            confirmTransfer={confirmTransfer}
+            declineTransfer={declineTransfer}
             edit={(payment) => openPayment(payment)}
             items={cleanup}
             skip={(id) => setCleanupSkipped((value) => [...value, id])}
             state={state}
+            transfer={
+              foundTransfer && foundGuess
+                ? { payment: foundTransfer, guess: foundGuess }
+                : undefined
+            }
           />
         )
       case "settlementList":

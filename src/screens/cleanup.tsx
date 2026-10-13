@@ -1,6 +1,6 @@
-import { ChevronRight, ListChecks, Plus } from "lucide-react"
-import { useState } from "react"
-import { Action } from "@/components/common"
+import { Link2, Sparkles } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { Action, cx } from "@/components/common"
 import { MainHeader } from "@/components/layout"
 import {
   TODAY,
@@ -10,13 +10,15 @@ import {
   won,
   type LedgerState,
   type Payment,
+  type TransferGuess,
 } from "@/lib/ledger"
+import { transferEvidenceLine, transferQuestion } from "@/screens/transfer"
 
 // ---------- 정리할 지출 ----------
 // 오늘 결제 중 사용자가 한 번 확인해야 남는 건:
 //  confirm = 근거로 복원됐지만 [맞아요]를 아직 누르지 않은 결제
 //  empty   = 근거가 하나도 없어 "기록 없음"인 결제
-// 송금·정산 대기 그룹 결제는 각자의 알림(링키가 찾았어요, 정산 대기)이 맡으므로 여기서 빼서 중복 안내를 막는다.
+// 송금·정산 대기 그룹 결제는 각자의 알림(링키가 찾았어요, 정산 팝업)이 맡으므로 여기서 건수에 넣지 않는다.
 export type CleanupItem = { payment: Payment; kind: "confirm" | "empty" }
 
 export function cleanupItems(state: LedgerState, skipped: string[]): CleanupItem[] {
@@ -36,145 +38,201 @@ export function cleanupItems(state: LedgerState, skipped: string[]): CleanupItem
   })
 }
 
-// 홈 배지: 눌러서 정리할 첫 건으로 바로 간다
-export function CleanupBadge({ count, open }: { count: number; open: () => void }) {
-  if (count === 0) return null
+// 홈 카드: "링키가 찾았어요" 자리에 놓인다. 누르면 첫 건부터 대화로 이어진다.
+export function CleanupCard({
+  count,
+  found,
+  open,
+}: {
+  count: number
+  // 정리할 건은 없지만 링키가 찾은 송금 맥락이 남아 있을 때의 문구
+  found?: string
+  open: () => void
+}) {
+  if (count === 0 && !found) return null
   return (
-    <Action className="cl-badge" label={`정리할 지출 ${count}건 열기`} onClick={open}>
-      <ListChecks size={20} strokeWidth={1.6} />
-      <span className="cl-badge-text">
-        <strong>정리할 지출 {count}건</strong>
-        <small>눌러서 하나씩 확인해요</small>
+    <Action
+      className="hm-link"
+      label="링키가 찾았어요 열기"
+      onClick={open}
+    >
+      <Sparkles size={20} strokeWidth={1.6} />
+      <span className="hm-link-text">
+        <strong>링키가 찾았어요</strong>
+        <small>{count > 0 ? `확인할 지출 ${count}건이 있어요` : found}</small>
       </span>
-      <ChevronRight size={18} strokeWidth={1.8} />
+      <span className="hm-link-pill">확인</span>
     </Action>
   )
 }
 
-// 첫 건부터 한 장씩 확인하고, 나머지는 아래 목록(보관함)에 모아 둔다
+type Turn =
+  | { id: string; kind: "confirm" | "empty"; payment: Payment }
+  | { id: string; kind: "transfer"; payment: Payment; guess: TransferGuess }
+
+// 챗봇 대화형: 링키가 한 건씩 묻고, 아래 답장 버튼으로 답한다. 처리한 건은 내 답장으로 남는다.
 export function CleanupScreen({
   items,
+  transfer,
   state,
   back,
   confirm,
   skip,
   edit,
   addRecord,
+  confirmTransfer,
+  declineTransfer,
 }: {
   items: CleanupItem[]
+  // 링키가 찾은 송금 맥락: 정리할 건 뒤에 마지막 질문으로 이어 붙인다
+  transfer?: { payment: Payment; guess: TransferGuess }
   state: LedgerState
   back: () => void
   confirm: (paymentId: string) => void
   skip: (paymentId: string) => void
   edit: (payment: Payment) => void
   addRecord: (paymentId: string) => void
+  confirmTransfer: (payment: Payment) => void
+  declineTransfer: (payment: Payment) => void
 }) {
-  // 목록에서 고른 건을 먼저 보여 준다. 처리되어 사라지면 맨 앞 건으로 돌아온다.
-  const [pickedId, setPickedId] = useState<string>()
-  const current = items.find((item) => item.payment.id === pickedId) ?? items[0]
-  const rest = items.filter((item) => item !== current)
-  if (!current) return null
-  const { payment, kind } = current
+  // 처리해서 목록에서 빠져도 대화에는 남도록 처음 열 때의 순서를 고정해 둔다
+  const [turns] = useState<Turn[]>(() => [
+    ...items.map((item) => ({ id: item.payment.id, ...item })),
+    ...(transfer
+      ? [{ id: transfer.payment.id, kind: "transfer" as const, ...transfer }]
+      : []),
+  ])
+  const [step, setStep] = useState(0)
+  const [replies, setReplies] = useState<string[]>([])
+  const pendingReply = useRef("확인했어요")
+  const endRef = useRef<HTMLDivElement>(null)
+  const current = turns[step]
+  const waiting = replies.length > step
+  const total = turns.filter((turn) => turn.kind !== "transfer").length
+
+  // 건이 처리되어 목록에서 빠지면 내 답장을 남긴다
+  useEffect(() => {
+    if (!current || current.kind === "transfer" || waiting) return
+    if (items.some((item) => item.payment.id === current.id)) return
+    setReplies((value) => [...value, pendingReply.current])
+    pendingReply.current = "확인했어요"
+  }, [current, items, waiting])
+
+  // 답장을 남긴 뒤 잠깐 있다가 링키가 다음 건을 묻는다
+  useEffect(() => {
+    if (!waiting) return
+    const timer = window.setTimeout(() => setStep((value) => value + 1), 450)
+    return () => window.clearTimeout(timer)
+  }, [waiting, step])
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
+  }, [step, replies.length])
+
+  const reply = (text: string, act: () => void) => {
+    pendingReply.current = text
+    act()
+  }
+  const shown = turns.slice(0, step + 1)
+  const finished = step >= turns.length
+
   return (
     <>
-      <MainHeader back={back} title="정리할 지출" />
-      <div className="main-scroll cl-scroll">
-        <p className="cl-progress">
-          {items.length > 1 ? `${items.length}건 남았어요` : "마지막 1건이에요"}
-        </p>
-        <CleanupCard
-          addRecord={addRecord}
-          confirm={confirm}
-          edit={edit}
-          item={current}
-          key={payment.id}
-          skip={skip}
-          state={state}
-        />
-        {rest.length > 0 && (
-          <section className="cl-rest">
-            <h2>다음 지출</h2>
-            {rest.map((item) => (
-              <Action
-                className="cl-rest-row"
-                key={item.payment.id}
-                onClick={() => setPickedId(item.payment.id)}
-              >
-                <span>
-                  <strong>{item.payment.merchant}</strong>
-                  <small>
-                    {item.payment.time} · {item.kind === "confirm" ? "맞는지 확인" : "기록 없음"}
-                  </small>
-                </span>
-                <b>{won(item.payment.amount)}</b>
-              </Action>
-            ))}
-          </section>
+      <MainHeader back={back} title="링키" />
+      <div className="main-scroll cl-thread">
+        {total > 0 && <Linky>오늘 확인할 지출이 {total}건 있어요</Linky>}
+        {shown.map((turn, index) => (
+          <TurnView
+            key={turn.id}
+            reply={replies[index]}
+            state={state}
+            turn={turn}
+          />
+        ))}
+        {finished && <Linky>오늘 정리 끝이에요</Linky>}
+        <div ref={endRef} />
+      </div>
+      <div className="cl-chips">
+        {finished ? (
+          <Action className="pill primary" onClick={back}>
+            홈으로
+          </Action>
+        ) : (
+          current &&
+          !waiting && (
+            <ChipsFor
+              addRecord={addRecord}
+              confirm={confirm}
+              confirmTransfer={confirmTransfer}
+              declineTransfer={declineTransfer}
+              edit={edit}
+              reply={reply}
+              skip={skip}
+              turn={current}
+            />
+          )
         )}
       </div>
     </>
   )
 }
 
-function CleanupCard({
-  item,
-  state,
-  confirm,
-  skip,
-  edit,
-  addRecord,
-}: {
-  item: CleanupItem
-  state: LedgerState
-  confirm: (paymentId: string) => void
-  skip: (paymentId: string) => void
-  edit: (payment: Payment) => void
-  addRecord: (paymentId: string) => void
-}) {
-  const { payment, kind } = item
+function Linky({ children }: { children: React.ReactNode }) {
   return (
-    <section className="main-card cl-card">
-      {kind === "confirm" ? (
-        <ConfirmBody payment={payment} state={state} />
-      ) : (
+    <div className="cl-row">
+      <i className="cl-avatar">
+        <Link2 size={14} strokeWidth={2.2} />
+      </i>
+      <div className="cl-bubble">{children}</div>
+    </div>
+  )
+}
+
+function TurnView({
+  turn,
+  reply,
+  state,
+}: {
+  turn: Turn
+  reply?: string
+  state: LedgerState
+}) {
+  const { payment } = turn
+  return (
+    <>
+      {turn.kind === "transfer" ? (
         <>
+          <Linky>링키가 찾았어요</Linky>
+          <Linky>
+            <p className="cl-text">{transferQuestion(payment, turn.guess)}</p>
+            <p className="cl-sub">{transferEvidenceLine(turn.guess)}</p>
+          </Linky>
+        </>
+      ) : turn.kind === "confirm" ? (
+        <ConfirmTurn payment={payment} state={state} />
+      ) : (
+        <Linky>
           <p className="cl-orig">{payment.time} 결제</p>
           <strong className="cl-title">{payment.merchant}</strong>
           <b className="cl-amount">{won(payment.amount)}</b>
-          <p className="cl-none">기록 없음</p>
-        </>
+          <p className="cl-sub">기록 없음</p>
+        </Linky>
       )}
-      <div className="cl-actions">
-        {kind === "confirm" ? (
-          <>
-            <Action className="pill" onClick={() => edit(payment)}>
-              수정
-            </Action>
-            <Action className="pill primary" onClick={() => confirm(payment.id)}>
-              맞아요
-            </Action>
-          </>
-        ) : (
-          <>
-            <Action className="pill" onClick={() => skip(payment.id)}>
-              기록 없음으로 두기
-            </Action>
-            <Action className="pill primary" onClick={() => addRecord(payment.id)}>
-              <Plus size={12} strokeWidth={2} /> 앨범에서 불러오기
-            </Action>
-          </>
-        )}
-      </div>
-    </section>
+      {reply && (
+        <div className="cl-row me">
+          <div className="cl-bubble me">{reply}</div>
+        </div>
+      )}
+    </>
   )
 }
 
 // 복원 결과는 근거와 함께 보여 준다 (원본 → 복원된 장소, 붙은 기록)
-function ConfirmBody({ payment, state }: { payment: Payment; state: LedgerState }) {
+function ConfirmTurn({ payment, state }: { payment: Payment; state: LedgerState }) {
   const restored = restoredOf(payment, state)
   if (!restored) return null
   return (
-    <>
+    <Linky>
       <p className="cl-orig">
         {payment.time} · {restored.original}
       </p>
@@ -188,6 +246,69 @@ function ConfirmBody({ payment, state }: { payment: Payment; state: LedgerState 
           <li key={evidence.key}>{evidence.text}</li>
         ))}
       </ul>
+    </Linky>
+  )
+}
+
+function ChipsFor({
+  turn,
+  reply,
+  confirm,
+  skip,
+  edit,
+  addRecord,
+  confirmTransfer,
+  declineTransfer,
+}: {
+  turn: Turn
+  reply: (text: string, act: () => void) => void
+  confirm: (paymentId: string) => void
+  skip: (paymentId: string) => void
+  edit: (payment: Payment) => void
+  addRecord: (paymentId: string) => void
+  confirmTransfer: (payment: Payment) => void
+  declineTransfer: (payment: Payment) => void
+}) {
+  const { payment } = turn
+  if (turn.kind === "confirm")
+    return (
+      <>
+        <Action className="pill" onClick={() => edit(payment)}>
+          수정
+        </Action>
+        <Action
+          className={cx("pill", "primary")}
+          onClick={() => reply("맞아요", () => confirm(payment.id))}
+        >
+          맞아요
+        </Action>
+      </>
+    )
+  if (turn.kind === "empty")
+    return (
+      <>
+        <Action
+          className="pill"
+          onClick={() => reply("기록 없음으로 둘게요", () => skip(payment.id))}
+        >
+          기록 없음으로 두기
+        </Action>
+        <Action
+          className="pill primary"
+          onClick={() => reply("앨범에서 불러왔어요", () => addRecord(payment.id))}
+        >
+          앨범에서 불러오기
+        </Action>
+      </>
+    )
+  return (
+    <>
+      <Action className="pill" onClick={() => declineTransfer(payment)}>
+        아니에요
+      </Action>
+      <Action className="pill primary" onClick={() => confirmTransfer(payment)}>
+        맞아요
+      </Action>
     </>
   )
 }
