@@ -224,6 +224,7 @@ export function DayPanel({
   unlinkPhoto,
   verify,
   confirmRestore,
+  revertTransfer,
   settlementPaymentId,
   openSettlement,
 }: {
@@ -248,6 +249,8 @@ export function DayPanel({
   unlinkPhoto: (photoId: string) => void
   verify: (paymentId: string) => void
   confirmRestore: (paymentId: string) => void
+  // 송금 수정 → 원래 이름으로 되돌리기 (맞아요 취소)
+  revertTransfer?: (paymentId: string) => void
   // 정산 흐름(그룹 결제 확인~정산표)이 걸린 결제와 그 화면을 여는 함수
   settlementPaymentId?: string
   openSettlement?: () => void
@@ -340,6 +343,7 @@ export function DayPanel({
                   unlinkPhoto={unlinkPhoto}
                   verify={verify}
                   confirmRestore={confirmRestore}
+                  revertTransfer={revertTransfer}
                   openSettlement={
                     payment.id === settlementPaymentId ? openSettlement : undefined
                   }
@@ -370,6 +374,7 @@ function PayCard({
   unlinkPhoto,
   verify,
   confirmRestore,
+  revertTransfer,
   openSettlement,
 }: {
   payment: Payment
@@ -385,6 +390,7 @@ function PayCard({
   unlinkPhoto: (photoId: string) => void
   verify: (paymentId: string) => void
   confirmRestore: (paymentId: string) => void
+  revertTransfer?: (paymentId: string) => void
   openSettlement?: () => void
 }) {
   // "수정"을 눌러야 근거 편집이 열린다
@@ -432,12 +438,20 @@ function PayCard({
           {/* 시각은 타임라인 왼쪽에 있어 카드에는 원본 가맹점명과 상태 칩만 둔다 */}
           {(restored || pendingGroup || personal) && (
             <span className="hm-spend-orig">
-              {restored && <span>{restored.original}</span>}
+              {restored &&
+                (restored.kind === "transfer" ? (
+                  // 맞아요로 바뀐 송금: 원래 이름 취소선 → 새 이름(포인트 색)
+                  <span className="tf-renamed-from">
+                    <s>{restored.original}</s> →
+                  </span>
+                ) : (
+                  <span>{restored.original}</span>
+                ))}
               {pendingGroup && <em className="pay-chip">정산 대기</em>}
               {personal && <em className="pay-tag">개인 지출</em>}
             </span>
           )}
-          <strong>{title}</strong>
+          <strong className={cx(restored?.kind === "transfer" && "tf-renamed-to")}>{title}</strong>
         </div>
         {photoIds.length > 0 && <i className="photo-thumb t0 hm-spend-thumb" />}
       </Action>
@@ -538,6 +552,17 @@ function PayCard({
             </div>
           ))}
           <div className="detail-actions">
+            {restored?.kind === "transfer" && revertTransfer && (
+              <Action
+                className="pill"
+                onClick={() => {
+                  revertTransfer(payment.id)
+                  setEditing(false)
+                }}
+              >
+                원래 이름으로 되돌리기
+              </Action>
+            )}
             {pendingGroup && (
               <Action className="pill" onClick={() => markPersonal(payment.id)}>
                 개인 지출로 두기

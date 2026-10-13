@@ -10,8 +10,8 @@ import {
   type YMD,
   TODAY,
   initialLedger,
-  sameDay,
   payments,
+  sameDay,
   transferGuess,
 } from "@/lib/ledger"
 import { AlbumTab, EventReport, PhotoDetail } from "@/screens/album"
@@ -30,6 +30,7 @@ import {
 import { CleanupScreen, cleanupItems } from "@/screens/cleanup"
 import { GroupSuggestSheet } from "@/screens/groupSuggest"
 import { PaymentDetail } from "@/screens/payment"
+import { type FoundTransfer, TransferPopup } from "@/screens/transferNotice"
 import { AlbumPicker, addedPhotoText } from "@/screens/record"
 import { SearchScreen } from "@/screens/search"
 import { TransferConfirm } from "@/screens/transfer"
@@ -82,6 +83,8 @@ export function MainApp({
   const [recordTarget, setRecordTarget] = useState<string>()
   // 맞아요를 누르면 화면 아래에 잠깐 떴다 사라지는 확인 알림 (같은 문구를 다시 눌러도 다시 뜨도록 key를 바꾼다)
   const [toast, setToast] = useState<{ text: string; key: number }>()
+  // 오늘 송금 팝업을 이번 실행에서 이미 띄웠는지
+  const [transferPopupSeen, setTransferPopupSeen] = useState(false)
   const showToast = (text: string) => setToast({ text, key: Date.now() })
   useEffect(() => {
     if (!toast) return
@@ -117,24 +120,12 @@ export function MainApp({
   )
   // 그룹 결제 확인의 "아니요, 개인 지출"이 가리키는 결제
   const meetingId = meeting?.id
-  // 오늘 정산을 확인해야 하는 그룹 결제는 홈에 들어오면 정산 시트를 팝업으로 한 번 띄운다.
-  // 닫아도 홈 알림 카드·정산 대기 배지로 다시 열 수 있다.
-  const groupPopupShown = useRef(false)
-  useEffect(() => {
-    if (groupPopupShown.current || !meeting) return
-    groupPopupShown.current = true
-    const pending =
-      sameDay(meeting.date, TODAY) &&
-      !settled &&
-      !state.splitConfirmed.includes(meeting.id) &&
-      !(state.personal ?? []).includes(meeting.id)
-    if (pending) setSplitting(meeting)
-  }, [settled, state.personal, state.splitConfirmed])
   const cleanup = cleanupItems(state, cleanupSkipped)
   // 정리할 건이 있다가 0이 되는 순간에만 "오늘 정리 끝"을 한 번 보인다 (어느 화면에서 끝내도 같다)
   const prevCleanup = useRef(cleanup.length)
   useEffect(() => {
-    if (prevCleanup.current > 0 && cleanup.length === 0) {
+    // 대화 화면 안에서는 대화가 끝날 때 팝업을 띄운다 (송금 질문이 남아 있을 수 있다)
+    if (prevCleanup.current > 0 && cleanup.length === 0 && view !== "cleanup") {
       setCleanupDone(true)
     }
     prevCleanup.current = cleanup.length
@@ -145,36 +136,68 @@ export function MainApp({
     return () => window.clearTimeout(timer)
   }, [cleanupDone])
   const toTabs = () => setView("tabs")
-  // 맥락을 찾았지만 아직 맞아요/아니에요를 누르지 않은 송금 (홈 알림)
-  const foundTransfer = payments.find(
-    (item) =>
-      item.kind === "transfer" &&
-      !state.transferMatched.includes(item.id) &&
-      !(state.transferDeclined ?? []).includes(item.id) &&
-      transferGuess(item, state) !== null,
-  )
-  const foundGuess = foundTransfer ? transferGuess(foundTransfer, state) : null
+  const dayNumber = (payment: Payment) => payment.date.y * 10000 + payment.date.m * 100 + payment.date.d
+  // 맥락을 찾았지만 아직 맞아요/아니에요를 누르지 않은 송금 (홈 알림·팝업), 최근 것부터
+  const pendingTransfers: FoundTransfer[] = payments
+    .filter(
+      (item) =>
+        item.kind === "transfer" &&
+        !state.transferMatched.includes(item.id) &&
+        !(state.transferDeclined ?? []).includes(item.id),
+    )
+    .flatMap((item) => {
+      const guess = transferGuess(item, state)
+      return guess ? [{ payment: item, guess }] : []
+    })
+    .sort((a, b) => dayNumber(b.payment) - dayNumber(a.payment))
+  // 오늘 송금은 홈에 들어올 때 팝업으로 한 번만 띄운다 (닫으면 홈 상단 알림으로 남는다)
+  const todayTransfer = pendingTransfers.find((item) => sameDay(item.payment.date, TODAY))
+  // 오늘 정산을 확인해야 하는 그룹 결제는 홈에서 정산 시트를 팝업으로 한 번 띄운다.
+  // 송금 팝업이 먼저 뜨는 날은 그 팝업을 닫은 뒤에 띄워 두 팝업이 겹치지 않게 한다.
+  // 닫아도 홈 알림 카드·정산 대기 배지로 다시 열 수 있다.
+  const groupPopupShown = useRef(false)
+  useEffect(() => {
+    if (groupPopupShown.current || !meeting) return
+    if (tab !== "home" || view !== "tabs") return
+    if (todayTransfer && !transferPopupSeen) return
+    groupPopupShown.current = true
+    const pending =
+      sameDay(meeting.date, TODAY) &&
+      !settled &&
+      !state.splitConfirmed.includes(meeting.id) &&
+      !(state.personal ?? []).includes(meeting.id)
+    if (pending) setSplitting(meeting)
+  }, [tab, view, todayTransfer, transferPopupSeen, settled, state.personal, state.splitConfirmed])
   const transferPayment = payments.find((item) => item.id === transferId)
   const detailPayment = payments.find((item) => item.id === detailId)
   const openDetail = (payment: Payment) => {
     setDetailId(payment.id)
     setView("paymentDetail")
   }
-  const confirmTransfer = (payment: Payment) => {
+  // stay: 정리 대화 안에서 처리할 때는 캘린더로 나가지 않고 그 자리에서 이어간다
+  const confirmTransfer = (payment: Payment, stay = false) => {
     showToast("확인했어요")
     setLedger((value) => ({
       ...value,
       transferMatched: [...value.transferMatched, payment.id],
     }))
     // 재분류된 결과를 지출 내역(날짜 시트)에서 바로 보여 준다
-    openPayment(payment)
+    if (!stay) openPayment(payment)
   }
-  const declineTransfer = (payment: Payment) => {
+  // 수정 → "원래 이름으로 되돌리기": 맞아요를 취소해 다시 송금(이체)으로 둔다
+  const revertTransfer = (paymentId: string) => {
+    showToast("원래 이름으로 되돌렸어요")
+    setLedger((value) => ({
+      ...value,
+      transferMatched: value.transferMatched.filter((id) => id !== paymentId),
+    }))
+  }
+  const declineTransfer = (payment: Payment, stay = false) => {
     setLedger((value) => ({
       ...value,
       transferDeclined: [...(value.transferDeclined ?? []), payment.id],
     }))
-    toTabs()
+    if (!stay) toTabs()
   }
   const recordPayment = payments.find((item) => item.id === recordTarget)
 
@@ -305,13 +328,10 @@ export function MainApp({
             if (meeting) setSplitting(meeting)
             else setView("settlementList")
           }}
-          foundTransfer={
-            foundTransfer && foundGuess
-              ? { payment: foundTransfer, guess: foundGuess }
-              : undefined
-          }
-          openTransfer={() => {
-            setTransferId(foundTransfer?.id)
+          pendingTransfers={pendingTransfers}
+          // 알림을 누르면 첫 건(가장 최근)의 확인 화면으로. 다른 흐름으로 바꿀 때는 이 핸들러만 바꾼다
+          openTransfer={(first) => {
+            setTransferId(first.payment.id)
             setView("transfer")
           }}
           pendingSettlement={
@@ -344,6 +364,7 @@ export function MainApp({
           }}
           detail={
             <DayPanel
+              revertTransfer={revertTransfer}
               back={() => {
                 setSheetDay(undefined)
                 setFocusPayment(undefined)
@@ -448,6 +469,7 @@ export function MainApp({
             detail={
               searchPayment ? (
                 <DayPanel
+                  revertTransfer={revertTransfer}
                   back={() => setSearchPayment(undefined)}
                   canReturn={false}
                   confirmRestore={confirmRestore}
@@ -562,6 +584,7 @@ export function MainApp({
         return detailPayment ? (
           <PaymentDetail
             back={toTabs}
+            revertTransfer={revertTransfer}
             confirmRestore={confirmRestore}
             openRecord={openRecord}
             payment={detailPayment}
@@ -588,17 +611,14 @@ export function MainApp({
             addRecord={openRecord}
             back={toTabs}
             confirm={confirmRestore}
-            confirmTransfer={confirmTransfer}
-            declineTransfer={declineTransfer}
+            confirmTransfer={(payment) => confirmTransfer(payment, true)}
+            declineTransfer={(payment) => declineTransfer(payment, true)}
             edit={(payment) => openPayment(payment)}
+            finish={() => setCleanupDone(true)}
             items={cleanup}
             skip={(id) => setCleanupSkipped((value) => [...value, id])}
             state={state}
-            transfer={
-              foundTransfer && foundGuess
-                ? { payment: foundTransfer, guess: foundGuess }
-                : undefined
-            }
+            transfers={pendingTransfers}
           />
         )
       case "settlementList":
@@ -736,6 +756,22 @@ export function MainApp({
               groupEdit: { ...value.groupEdit, [splitting.id]: edit },
             }))
           }
+        />
+      )}
+      {todayTransfer && !transferPopupSeen && view === "tabs" && tab === "home" && (
+        <TransferPopup
+          close={() => setTransferPopupSeen(true)}
+          confirm={() => {
+            setTransferPopupSeen(true)
+            confirmTransfer(todayTransfer.payment)
+          }}
+          edit={() => {
+            setTransferPopupSeen(true)
+            setTransferId(todayTransfer.payment.id)
+            setView("transfer")
+          }}
+          item={todayTransfer}
+          state={state}
         />
       )}
       {toast && (

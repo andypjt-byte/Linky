@@ -39,17 +39,8 @@ export function cleanupItems(state: LedgerState, skipped: string[]): CleanupItem
 }
 
 // 홈 카드: "링키가 찾았어요" 자리에 놓인다. 누르면 첫 건부터 대화로 이어진다.
-export function CleanupCard({
-  count,
-  found,
-  open,
-}: {
-  count: number
-  // 정리할 건은 없지만 링키가 찾은 송금 맥락이 남아 있을 때의 문구
-  found?: string
-  open: () => void
-}) {
-  if (count === 0 && !found) return null
+export function CleanupCard({ count, open }: { count: number; open: () => void }) {
+  if (count === 0) return null
   return (
     <Action
       className="hm-link"
@@ -59,7 +50,7 @@ export function CleanupCard({
       <Sparkles size={20} strokeWidth={1.6} />
       <span className="hm-link-text">
         <strong>링키가 찾았어요</strong>
-        <small>{count > 0 ? `확인할 지출 ${count}건이 있어요` : found}</small>
+        <small>확인할 지출 {count}건이 있어요</small>
       </span>
       <span className="hm-link-pill">확인</span>
     </Action>
@@ -73,7 +64,7 @@ type Turn =
 // 챗봇 대화형: 링키가 한 건씩 묻고, 아래 답장 버튼으로 답한다. 처리한 건은 내 답장으로 남는다.
 export function CleanupScreen({
   items,
-  transfer,
+  transfers = [],
   state,
   back,
   confirm,
@@ -82,10 +73,13 @@ export function CleanupScreen({
   addRecord,
   confirmTransfer,
   declineTransfer,
+  finish,
 }: {
+  // 대화가 끝났을 때 한 번 알린다 ("오늘 정리 끝" 팝업)
+  finish: () => void
   items: CleanupItem[]
-  // 링키가 찾은 송금 맥락: 정리할 건 뒤에 마지막 질문으로 이어 붙인다
-  transfer?: { payment: Payment; guess: TransferGuess }
+  // 링키가 찾은 송금 맥락: 정리할 건 뒤에 질문으로 이어 붙인다 (건마다 한 번씩)
+  transfers?: { payment: Payment; guess: TransferGuess }[]
   state: LedgerState
   back: () => void
   confirm: (paymentId: string) => void
@@ -98,9 +92,7 @@ export function CleanupScreen({
   // 처리해서 목록에서 빠져도 대화에는 남도록 처음 열 때의 순서를 고정해 둔다
   const [turns] = useState<Turn[]>(() => [
     ...items.map((item) => ({ id: item.payment.id, ...item })),
-    ...(transfer
-      ? [{ id: transfer.payment.id, kind: "transfer" as const, ...transfer }]
-      : []),
+    ...transfers.map((item) => ({ id: item.payment.id, kind: "transfer" as const, ...item })),
   ])
   const [step, setStep] = useState(0)
   const [replies, setReplies] = useState<string[]>([])
@@ -112,11 +104,15 @@ export function CleanupScreen({
 
   // 건이 처리되어 목록에서 빠지면 내 답장을 남긴다
   useEffect(() => {
-    if (!current || current.kind === "transfer" || waiting) return
-    if (items.some((item) => item.payment.id === current.id)) return
+    if (!current || waiting) return
+    const stillOpen =
+      current.kind === "transfer"
+        ? transfers.some((item) => item.payment.id === current.id)
+        : items.some((item) => item.payment.id === current.id)
+    if (stillOpen) return
     setReplies((value) => [...value, pendingReply.current])
     pendingReply.current = "확인했어요"
-  }, [current, items, waiting])
+  }, [current, items, transfers, waiting])
 
   // 답장을 남긴 뒤 잠깐 있다가 링키가 다음 건을 묻는다
   useEffect(() => {
@@ -135,6 +131,9 @@ export function CleanupScreen({
   }
   const shown = turns.slice(0, step + 1)
   const finished = step >= turns.length
+  useEffect(() => {
+    if (finished && turns.length > 0) finish()
+  }, [finished])
 
   return (
     <>
@@ -303,10 +302,16 @@ function ChipsFor({
     )
   return (
     <>
-      <Action className="pill" onClick={() => declineTransfer(payment)}>
+      <Action
+        className="pill"
+        onClick={() => reply("아니에요", () => declineTransfer(payment))}
+      >
         아니에요
       </Action>
-      <Action className="pill primary" onClick={() => confirmTransfer(payment)}>
+      <Action
+        className="pill primary"
+        onClick={() => reply("맞아요", () => confirmTransfer(payment))}
+      >
         맞아요
       </Action>
     </>

@@ -16,6 +16,7 @@ import { Action, cx } from "@/components/common"
 import { HeaderActions } from "@/components/layout"
 import { meeting } from "@/lib/settlement"
 import { CleanupCard } from "@/screens/cleanup"
+import { type FoundTransfer, TransferNotice } from "@/screens/transferNotice"
 import {
   TODAY,
   dayMine,
@@ -41,7 +42,6 @@ import {
   type LedgerState,
   type Category,
   type Payment,
-  type TransferGuess,
   type YMD,
 } from "@/lib/ledger"
 
@@ -354,7 +354,7 @@ export function HomePage({
   openPhoto,
   openSettlement,
   pendingSettlement,
-  foundTransfer,
+  pendingTransfers,
   openTransfer,
   cleanupCount = 0,
   openCleanup,
@@ -371,10 +371,10 @@ export function HomePage({
   // 정산 알림(필요시): 처리할 정산이 있을 때만 값이 있다
   openSettlement: () => void
   pendingSettlement?: { count: number; total: number }
-  // "링키가 찾았어요": 가맹점 없는 송금에서 맥락을 찾았을 때만 값이 있다
-  foundTransfer?: { payment: Payment; guess: TransferGuess }
-  openTransfer: () => void
-  // 정리할 지출: 오늘 확인이 남은 건수와 첫 건으로 가는 진입
+  // "링키가 찾았어요": 맥락을 찾았지만 아직 확인하지 않은 송금 (transferNotice.tsx)
+  pendingTransfers: FoundTransfer[]
+  openTransfer: (first: FoundTransfer) => void
+  // 정리할 지출: 오늘 확인이 남은 건수와, 대화형 정리 화면을 여는 진입
   cleanupCount?: number
   openCleanup?: () => void
 }) {
@@ -403,9 +403,6 @@ export function HomePage({
   const linkedPayment = (photo: Photo) =>
     selectedList.find((payment) => photosFor(payment, state).some((item) => item.id === photo.id))
   // 송금 맥락은 주간 캘린더 바로 아래 연라임 카드로, 그룹 결제는 아래 알림 카드로 띄운다
-  const foundBody = foundTransfer
-    ? `${foundTransfer.payment.counterparty} ${won(foundTransfer.payment.amount)} 송금, ${foundTransfer.guess.place ?? "내"} 기록과 이어져요`
-    : undefined
   // 감지된 것만 알림으로 띄운다: 송금 맥락, 그룹 결제 (복원 결과는 알림 없이 캘린더 카드에서 확인)
   // 오늘 받은 알림이라 다른 날짜를 골랐을 때는 보이지 않는다
   const notices: Notice[] = [
@@ -440,10 +437,16 @@ export function HomePage({
       </div>
       <div className="main-scroll hm-scroll">
         <div className="hm-zoom">
-        {/* "링키가 찾았어요" 자리: 정리할 지출을 먼저 보이고, 누르면 대화로 이어진다 */}
-        {isToday && openCleanup && (
-          <CleanupCard count={cleanupCount} found={foundBody} open={openCleanup} />
-        )}
+        {/* "링키가 찾았어요" 자리: 찾은 송금이 있으면 A의 알림, 정리할 지출만 있으면 정리 카드. 누르면 둘 다 같은 대화로 이어진다 */}
+        {isToday &&
+          (pendingTransfers.length > 0 ? (
+            <TransferNotice
+              items={pendingTransfers}
+              onClick={(first) => (openCleanup ? openCleanup() : openTransfer(first))}
+            />
+          ) : (
+            openCleanup && <CleanupCard count={cleanupCount} open={openCleanup} />
+          ))}
 
         <section className="hm-weekcard">
           <div className="hm-head">
