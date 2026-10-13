@@ -15,6 +15,7 @@ import { useRef, type MouseEvent, type PointerEvent } from "react"
 import { Action, cx } from "@/components/common"
 import { HeaderActions } from "@/components/layout"
 import { meeting } from "@/lib/settlement"
+import { CleanupBadge } from "@/screens/cleanup"
 import {
   TODAY,
   dayMine,
@@ -355,6 +356,8 @@ export function HomePage({
   pendingSettlement,
   foundTransfer,
   openTransfer,
+  cleanupCount = 0,
+  openCleanup,
 }: {
   day: YMD
   state: LedgerState
@@ -371,6 +374,9 @@ export function HomePage({
   // "링키가 찾았어요": 가맹점 없는 송금에서 맥락을 찾았을 때만 값이 있다
   foundTransfer?: { payment: Payment; guess: TransferGuess }
   openTransfer: () => void
+  // 정리할 지출: 오늘 확인이 남은 건수와 첫 건으로 가는 진입
+  cleanupCount?: number
+  openCleanup?: () => void
 }) {
   // 고른 날이 속한 주를 보여 준다. 화살표로 한 주씩 이동하고, 이번 주보다 뒤로는 가지 않는다
   const week = weekOf(day)
@@ -484,6 +490,8 @@ export function HomePage({
             })}
           </div>
         </section>
+
+        {isToday && openCleanup && <CleanupBadge count={cleanupCount} open={openCleanup} />}
 
         <section className="main-card hm-today">
           <div className="hm-today-top">

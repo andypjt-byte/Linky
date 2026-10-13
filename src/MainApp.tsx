@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { UserRound } from "lucide-react"
 import { Action } from "@/components/common"
 import { BottomTabs } from "@/components/layout"
@@ -26,6 +26,7 @@ import {
   PrivacySettings,
   ProfileInfoSettings,
 } from "@/screens/profile"
+import { CleanupScreen, cleanupItems } from "@/screens/cleanup"
 import { GroupSuggestSheet } from "@/screens/groupSuggest"
 import { PaymentDetail } from "@/screens/payment"
 import { AlbumPicker, addedPhotoText } from "@/screens/record"
@@ -87,6 +88,9 @@ export function MainApp({
     return () => window.clearTimeout(timer)
   }, [toast])
   const [splitting, setSplitting] = useState<Payment>()
+  // 정리할 지출: "기록 없음으로 두기"를 누른 결제와, 모두 끝났을 때 한 번 뜨는 완료 팝업
+  const [cleanupSkipped, setCleanupSkipped] = useState<string[]>([])
+  const [cleanupDone, setCleanupDone] = useState(false)
   // 링키가 찾았어요: 확인 중인 송금
   const [transferId, setTransferId] = useState<string>()
   // 지출 내역 상세: 홈 오늘 지출에서 연 결제
@@ -112,6 +116,21 @@ export function MainApp({
   )
   // 그룹 결제 확인의 "아니요, 개인 지출"이 가리키는 결제
   const meetingId = meeting?.id
+  const cleanup = cleanupItems(state, cleanupSkipped)
+  // 정리할 건이 있다가 0이 되는 순간에만 "오늘 정리 끝"을 한 번 보인다 (어느 화면에서 끝내도 같다)
+  const prevCleanup = useRef(cleanup.length)
+  useEffect(() => {
+    if (prevCleanup.current > 0 && cleanup.length === 0) {
+      setCleanupDone(true)
+      setView((current) => (current === "cleanup" ? "tabs" : current))
+    }
+    prevCleanup.current = cleanup.length
+  }, [cleanup.length])
+  useEffect(() => {
+    if (!cleanupDone) return
+    const timer = window.setTimeout(() => setCleanupDone(false), 2200)
+    return () => window.clearTimeout(timer)
+  }, [cleanupDone])
   const toTabs = () => setView("tabs")
   // 맥락을 찾았지만 아직 맞아요/아니에요를 누르지 않은 송금 (홈 알림)
   const foundTransfer = payments.find(
@@ -142,7 +161,9 @@ export function MainApp({
       ...value,
       transferDeclined: [...(value.transferDeclined ?? []), payment.id],
     }))
-    toTabs()
+    // 정리할 지출이 남아 있으면 첫 건부터 이어서 확인한다
+    if (cleanup.length > 0) setView("cleanup")
+    else toTabs()
   }
   const recordPayment = payments.find((item) => item.id === recordTarget)
 
@@ -222,7 +243,8 @@ export function MainApp({
         },
       }
     })
-    if (view !== "paymentDetail") setView("tabs")
+    // 정리 화면에서 기록을 붙였을 때는 그 자리에서 다음 건을 이어서 본다
+    if (view !== "paymentDetail" && view !== "cleanup") setView("tabs")
     setRecordTarget(undefined)
   }
   const openRecord = (paymentId?: string) => {
@@ -292,6 +314,8 @@ export function MainApp({
                 })()
           }
           openPayment={openDetail}
+          cleanupCount={cleanup.length}
+          openCleanup={() => setView("cleanup")}
           openProfile={() => setView("profile")}
           openSearch={() => setView("search")}
           selectDay={setHomeDay}
@@ -547,6 +571,18 @@ export function MainApp({
             state={state}
           />
         ) : null
+      case "cleanup":
+        return (
+          <CleanupScreen
+            addRecord={openRecord}
+            back={toTabs}
+            confirm={confirmRestore}
+            edit={(payment) => openPayment(payment)}
+            items={cleanup}
+            skip={(id) => setCleanupSkipped((value) => [...value, id])}
+            state={state}
+          />
+        )
       case "settlementList":
         return (
           <SettlementList
@@ -687,6 +723,12 @@ export function MainApp({
       {toast && (
         <div className="app-toast" key={toast.key} role="status" aria-live="polite">
           {toast.text}
+        </div>
+      )}
+      {cleanupDone && (
+        <div className="cl-done" role="status" aria-live="polite">
+          <strong>오늘 정리 끝</strong>
+          <span>확인할 지출을 모두 확인했어요</span>
         </div>
       )}
     </div>
