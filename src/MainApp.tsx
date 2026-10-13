@@ -10,6 +10,7 @@ import {
   type YMD,
   TODAY,
   initialLedger,
+  sameDay,
   payments,
   transferGuess,
 } from "@/lib/ledger"
@@ -116,6 +117,19 @@ export function MainApp({
   )
   // 그룹 결제 확인의 "아니요, 개인 지출"이 가리키는 결제
   const meetingId = meeting?.id
+  // 오늘 정산을 확인해야 하는 그룹 결제는 홈에 들어오면 정산 시트를 팝업으로 한 번 띄운다.
+  // 닫아도 홈 알림 카드·정산 대기 배지로 다시 열 수 있다.
+  const groupPopupShown = useRef(false)
+  useEffect(() => {
+    if (groupPopupShown.current || !meeting) return
+    groupPopupShown.current = true
+    const pending =
+      sameDay(meeting.date, TODAY) &&
+      !settled &&
+      !state.splitConfirmed.includes(meeting.id) &&
+      !(state.personal ?? []).includes(meeting.id)
+    if (pending) setSplitting(meeting)
+  }, [settled, state.personal, state.splitConfirmed])
   const cleanup = cleanupItems(state, cleanupSkipped)
   // 정리할 건이 있다가 0이 되는 순간에만 "오늘 정리 끝"을 한 번 보인다 (어느 화면에서 끝내도 같다)
   const prevCleanup = useRef(cleanup.length)
