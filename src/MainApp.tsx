@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { UserRound } from "lucide-react"
 import { Action } from "@/components/common"
 import { BottomTabs } from "@/components/layout"
@@ -78,6 +78,14 @@ export function MainApp({
   const [mapPeriod, setMapPeriod] = useState<"day" | "week" | "month">("day")
   const [returnToMonth, setReturnToMonth] = useState<YMD>()
   const [recordTarget, setRecordTarget] = useState<string>()
+  // 맞아요를 누르면 화면 아래에 잠깐 떴다 사라지는 확인 알림 (같은 문구를 다시 눌러도 다시 뜨도록 key를 바꾼다)
+  const [toast, setToast] = useState<{ text: string; key: number }>()
+  const showToast = (text: string) => setToast({ text, key: Date.now() })
+  useEffect(() => {
+    if (!toast) return
+    const timer = window.setTimeout(() => setToast(undefined), 1800)
+    return () => window.clearTimeout(timer)
+  }, [toast])
   const [splitting, setSplitting] = useState<Payment>()
   // 링키가 찾았어요: 확인 중인 송금
   const [transferId, setTransferId] = useState<string>()
@@ -121,6 +129,7 @@ export function MainApp({
     setView("paymentDetail")
   }
   const confirmTransfer = (payment: Payment) => {
+    showToast("확인했어요")
     setLedger((value) => ({
       ...value,
       transferMatched: [...value.transferMatched, payment.id],
@@ -173,16 +182,20 @@ export function MainApp({
       ...value,
       photoUnlinked: value.photoUnlinked.filter((item) => item !== id),
     }))
-  const verify = (paymentId: string) =>
+  const verify = (paymentId: string) => {
+    showToast("확인했어요")
     setLedger((value) => ({
       ...value,
       verified: [...(value.verified ?? []), paymentId],
     }))
-  const confirmRestore = (paymentId: string) =>
+  }
+  const confirmRestore = (paymentId: string) => {
+    showToast("확인했어요")
     setLedger((value) => ({
       ...value,
       restoreConfirmed: [...value.restoreConfirmed, paymentId],
     }))
+  }
   const markPersonal = (paymentId: string) =>
     setLedger((value) => ({
       ...value,
@@ -670,6 +683,11 @@ export function MainApp({
             }))
           }
         />
+      )}
+      {toast && (
+        <div className="app-toast" key={toast.key} role="status" aria-live="polite">
+          {toast.text}
+        </div>
       )}
     </div>
   )

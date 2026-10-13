@@ -8090,3 +8090,45 @@ p {
 .search-content::-webkit-scrollbar {
   display: none;
 }
+
+/* 맞아요 확인 알림: 화면 아래(탭 위)에 반투명 검정으로 잠깐 떴다 사라진다 */
+.app-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 96px;
+  z-index: 80;
+  max-width: calc(100% - var(--page-padding) * 2);
+  padding: 12px 18px;
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--toast) 82%, transparent);
+  color: var(--background);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  font-weight: var(--fw-item-title);
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: app-toast 1.8s ease forwards;
+}
+
+@keyframes app-toast {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  12%,
+  80% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-toast {
+    animation: none;
+  }
+}
