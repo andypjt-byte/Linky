@@ -33,6 +33,8 @@ export const SCENARIO = {
   },
   // 송금: 가맹점 없는 출금 → 연남동 파스타 정산으로 추정
   transfer: { id: "sc-transfer", time: "21:30", counterparty: "김지은", amount: 18000 },
+  // 오늘 송금: 동기 저녁 모임이 끝난 뒤 민지에게 보낸 돈 → 홈 진입 팝업("링키가 찾았어요") 시연용
+  transferToday: { id: "sc-transfer-today", time: "21:40", counterparty: "박민지", amount: 6000 },
 } as const
 
 export const scenarioEvents: CalEvent[] = [
@@ -58,7 +60,7 @@ export const scenarioTrail: TrailPoint[] = [
   { id: "t-sc2", date: d(10, 31), time: "09:30", name: "", zone: "압구정로데오" },
 ]
 
-const { taxi, photoism, meal, transfer } = SCENARIO
+const { taxi, photoism, meal, transfer, transferToday } = SCENARIO
 
 export const scenarioPayments: Payment[] = [
   {
@@ -104,6 +106,16 @@ export const scenarioPayments: Payment[] = [
     zone: "연남동",
     kind: "transfer",
     counterparty: transfer.counterparty,
+  },
+  {
+    id: transferToday.id,
+    date: d(10, 31),
+    time: transferToday.time,
+    merchant: "송금",
+    amount: transferToday.amount,
+    zone: "강남역",
+    kind: "transfer",
+    counterparty: transferToday.counterparty,
   },
 ]
 

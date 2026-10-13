@@ -8132,3 +8132,122 @@ p {
     animation: none;
   }
 }
+
+/* ---------- 링키가 찾았어요: 송금 맥락 알림·팝업·바뀐 이름 (transferNotice.tsx) ---------- */
+.tf-notice-count {
+  margin-left: 4px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-weight: var(--fw-title);
+  font-style: normal;
+}
+
+.tf-notice > svg:last-child {
+  flex: none;
+  color: var(--text-mute);
+}
+
+.main-overlay.center.tf-popup-dim {
+  z-index: 70;
+}
+
+.tf-popup {
+  width: 100%;
+  position: relative;
+  padding: 22px 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 20px;
+  background: var(--background);
+  animation: fade-in 0.2s ease;
+}
+
+.tf-popup-close {
+  width: 32px;
+  height: 32px;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--text-mute);
+}
+
+.tf-popup-badge {
+  align-self: flex-start;
+  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 12px;
+  background: var(--lime-card);
+  color: var(--primary-text);
+  font-size: var(--fs-label);
+  line-height: var(--lh-label);
+  font-weight: var(--fw-title);
+}
+
+.tf-popup-facts {
+  margin: 4px 0 0;
+  color: var(--text-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
+.tf-popup-rename {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  font-size: var(--fs-title);
+  line-height: var(--lh-title);
+}
+
+.tf-popup-rename s {
+  color: var(--text-mute);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
+.tf-popup-rename span {
+  color: var(--text-mute);
+}
+
+.tf-popup-rename strong {
+  color: var(--primary-text);
+  font-weight: var(--fw-title);
+}
+
+.tf-popup-evidence {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text-body);
+  font-size: var(--fs-label);
+  line-height: var(--lh-label);
+}
+
+.tf-popup-actions {
+  margin-top: 6px;
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 8px;
+}
+
+/* 맞아요로 바뀐 송금 행: 원래 이름 취소선 → 새 이름(포인트 색) */
+.tf-renamed-from s {
+  color: var(--text-mute);
+}
+
+.tf-renamed-to {
+  color: var(--primary-text);
+}

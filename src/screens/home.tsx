@@ -15,6 +15,7 @@ import { useRef, type MouseEvent, type PointerEvent } from "react"
 import { Action, cx } from "@/components/common"
 import { HeaderActions } from "@/components/layout"
 import { meeting } from "@/lib/settlement"
+import { type FoundTransfer, TransferNotice } from "@/screens/transferNotice"
 import {
   TODAY,
   dayMine,
@@ -40,7 +41,6 @@ import {
   type LedgerState,
   type Category,
   type Payment,
-  type TransferGuess,
   type YMD,
 } from "@/lib/ledger"
 
@@ -353,7 +353,7 @@ export function HomePage({
   openPhoto,
   openSettlement,
   pendingSettlement,
-  foundTransfer,
+  pendingTransfers,
   openTransfer,
 }: {
   day: YMD
@@ -368,9 +368,9 @@ export function HomePage({
   // 정산 알림(필요시): 처리할 정산이 있을 때만 값이 있다
   openSettlement: () => void
   pendingSettlement?: { count: number; total: number }
-  // "링키가 찾았어요": 가맹점 없는 송금에서 맥락을 찾았을 때만 값이 있다
-  foundTransfer?: { payment: Payment; guess: TransferGuess }
-  openTransfer: () => void
+  // "링키가 찾았어요": 맥락을 찾았지만 아직 확인하지 않은 송금 (transferNotice.tsx)
+  pendingTransfers: FoundTransfer[]
+  openTransfer: (first: FoundTransfer) => void
 }) {
   // 고른 날이 속한 주를 보여 준다. 화살표로 한 주씩 이동하고, 이번 주보다 뒤로는 가지 않는다
   const week = weekOf(day)
@@ -397,9 +397,6 @@ export function HomePage({
   const linkedPayment = (photo: Photo) =>
     selectedList.find((payment) => photosFor(payment, state).some((item) => item.id === photo.id))
   // 송금 맥락은 주간 캘린더 바로 아래 연라임 카드로, 그룹 결제는 아래 알림 카드로 띄운다
-  const foundBody = foundTransfer
-    ? `${foundTransfer.payment.counterparty} ${won(foundTransfer.payment.amount)} 송금, ${foundTransfer.guess.place ?? "내"} 기록과 이어져요`
-    : undefined
   // 감지된 것만 알림으로 띄운다: 송금 맥락, 그룹 결제 (복원 결과는 알림 없이 캘린더 카드에서 확인)
   // 오늘 받은 알림이라 다른 날짜를 골랐을 때는 보이지 않는다
   const notices: Notice[] = [
@@ -434,16 +431,7 @@ export function HomePage({
       </div>
       <div className="main-scroll hm-scroll">
         <div className="hm-zoom">
-        {isToday && foundBody && (
-          <Action className="hm-link" onClick={openTransfer}>
-            <Sparkles size={20} strokeWidth={1.6} />
-            <span className="hm-link-text">
-              <strong>링키가 찾았어요</strong>
-              <small>{foundBody}</small>
-            </span>
-            <span className="hm-link-pill">확인</span>
-          </Action>
-        )}
+        {isToday && <TransferNotice items={pendingTransfers} onClick={openTransfer} />}
 
         <section className="hm-weekcard">
           <div className="hm-head">
