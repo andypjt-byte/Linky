@@ -8132,3 +8132,75 @@ p {
     animation: none;
   }
 }
+
+/* 온보딩: 데이터 입력 → 결과 설명, 권한 안내 3줄(무엇을·왜·어디에) */
+.ob-flow {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  border-radius: 14px;
+  background: var(--primary-soft);
+  color: var(--text);
+}
+
+.ob-flow > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ob-flow span {
+  color: var(--text-mute);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-weight: var(--fw-caption);
+}
+
+.ob-flow strong {
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  font-weight: var(--fw-item-title);
+  word-break: keep-all;
+}
+
+.ob-flow small {
+  color: var(--text-body);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-weight: var(--fw-caption);
+}
+
+.perm-lines {
+  margin: 2px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.perm-lines > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.perm-lines dt {
+  width: 44px;
+  flex: none;
+  color: var(--text-mute);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-weight: var(--fw-caption);
+}
+
+.perm-lines dd {
+  margin: 0;
+  min-width: 0;
+  color: var(--text-body);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-weight: var(--fw-caption);
+  word-break: keep-all;
+}
